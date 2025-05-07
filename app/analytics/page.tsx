@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2">Today's Revenue</h2>
+                <h2 className="text-lg font-semibold mb-2">Today&apos;s Revenue</h2>
                 <p className="text-2xl text-pink-600">RM {periodSales.daily.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-white rounded shadow">

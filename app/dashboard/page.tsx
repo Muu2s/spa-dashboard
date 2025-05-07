@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
@@ -34,11 +34,7 @@ export default function DashboardPage() {
 
   const today = dayjs().format('YYYY-MM-DD');
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -65,7 +61,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array since it doesn't depend on any props or state
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]); // Add dependency
 
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
 
