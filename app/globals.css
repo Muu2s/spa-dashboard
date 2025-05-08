@@ -45,4 +45,12 @@ body {
   label {
     @apply text-gray-700;
   }
+
+  input {
+    @apply text-gray-900 placeholder-gray-500;
+  }
+  
+  input:focus {
+    @apply outline-none ring-1 ring-pink-500 border-pink-500;
+  }
 }
