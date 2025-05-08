@@ -14,15 +14,21 @@ interface Sale {
   date: string;
 }
 
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString();
+};
+
 export default function SalesPage() {
   const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     customer_name: '',
     service: '',
     amount: '',
-    date: '',
+    date: new Date().toISOString().split('T')[0], // Set today as default
   });
 
   useEffect(() => {
@@ -30,10 +36,23 @@ export default function SalesPage() {
   }, []);
 
   const fetchSales = async () => {
-    const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
-    if (error) console.error('Error fetching sales:', error);
-    else setSales(data || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: fetchError } = await supabase
+        .from('sales')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (fetchError) throw new Error(fetchError.message);
+      setSales(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch sales');
+      console.error('Error fetching sales:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -42,31 +61,69 @@ export default function SalesPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(null);
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { customer_name, service, amount, date } = formData;
-    const amountNumber = parseFloat(amount);
-    if (isNaN(amountNumber)) return alert('Invalid amount');
+    setError(null);
+    setIsSubmitting(true);
 
-    const { error } = await supabase.from('sales').insert([{ customer_name, service, amount: amountNumber, date }]);
-    if (error) console.error('Insert error:', error);
-    else {
-      setFormData({ customer_name: '', service: '', amount: '', date: '' });
-      fetchSales();
+    try {
+      const { customer_name, service, amount, date } = formData;
+      
+      // Validation
+      if (!customer_name || !service || !amount || !date) {
+        throw new Error('All fields are required');
+      }
+
+      const amountNumber = parseFloat(amount);
+      if (isNaN(amountNumber) || amountNumber <= 0) {
+        throw new Error('Please enter a valid amount');
+      }
+
+      const { error: insertError } = await supabase
+        .from('sales')
+        .insert([{ 
+          customer_name, 
+          service, 
+          amount: amountNumber, 
+          date 
+        }]);
+
+      if (insertError) throw new Error(insertError.message);
+
+      // Reset form on success
+      setFormData({
+        customer_name: '',
+        service: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+      });
+      
+      await fetchSales();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add sale');
+      console.error('Sale insertion error:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const todaySales = sales
+    .filter(sale => new Date(sale.date).toDateString() === new Date().toDateString())
+    .reduce((sum, sale) => sum + sale.amount, 0);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-2xl font-bold mb-4">Sales</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">Sales</h1>
 
         <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded shadow-sm space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <input
               type="text"
               name="customer_name"
@@ -74,7 +131,8 @@ export default function SalesPage() {
               value={formData.customer_name}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
+              disabled={isSubmitting}
             />
             <input
               type="text"
@@ -83,7 +141,8 @@ export default function SalesPage() {
               value={formData.service}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
+              disabled={isSubmitting}
             />
             <input
               type="number"
@@ -92,7 +151,10 @@ export default function SalesPage() {
               value={formData.amount}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              min="0"
+              step="0.01"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
+              disabled={isSubmitting}
             />
             <input
               type="date"
@@ -100,38 +162,53 @@ export default function SalesPage() {
               value={formData.date}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              className="p-2 border rounded w-full text-gray-900"
+              disabled={isSubmitting}
             />
           </div>
-          <button type="submit" className="px-4 py-2 bg-pink-600 text-white rounded">Add Sale</button>
+          
+          <div>
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 disabled:opacity-50"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Adding...' : 'Add Sale'}
+            </button>
+            
+            {error && (
+              <p className="text-red-500 text-sm mt-2">{error}</p>
+            )}
+          </div>
         </form>
 
-        {loading ? (
-          <p>Loading sales...</p>
-        ) : sales.length === 0 ? (
-          <p>No sales recorded.</p>
-        ) : (
-          <table className="w-full bg-white shadow-sm rounded">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="p-4 bg-white rounded shadow">
+            <h2 className="text-lg font-semibold mb-2 text-gray-900">Today&apos;s Sales</h2>
+            <p className="text-2xl text-pink-600">RM {todaySales.toFixed(2)}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded shadow">
+          <table className="w-full">
             <thead>
-              <tr className="text-left border-b">
-                <th className="p-3">Customer</th>
-                <th className="p-3">Service</th>
-                <th className="p-3">Amount</th>
-                <th className="p-3">Date</th>
+              <tr className="border-b">
+                <th className="p-3 text-left text-gray-900">Service</th>
+                <th className="p-3 text-left text-gray-900">Amount</th>
+                <th className="p-3 text-left text-gray-900">Date</th>
               </tr>
             </thead>
             <tbody>
-              {sales.map((sale) => (
+              {sales.map(sale => (
                 <tr key={sale.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{sale.customer_name}</td>
-                  <td className="p-3">{sale.service}</td>
-                  <td className="p-3">RM {sale.amount.toFixed(2)}</td>
-                  <td className="p-3">{sale.date}</td>
+                  <td className="p-3 text-gray-700">{sale.service}</td>
+                  <td className="p-3 text-gray-700">RM {sale.amount.toFixed(2)}</td>
+                  <td className="p-3 text-gray-700">{formatDate(sale.date)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </main>
     </div>
   );

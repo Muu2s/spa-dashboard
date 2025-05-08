@@ -155,7 +155,7 @@ export default function AppointmentPage() {
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-2xl font-bold mb-4">Appointments</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">Appointments</h1>
 
         <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded shadow-sm space-y-4">
           {error && (
@@ -171,7 +171,7 @@ export default function AppointmentPage() {
               value={formData.customer_name}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
               disabled={isSubmitting}
             />
             <input
@@ -215,7 +215,7 @@ export default function AppointmentPage() {
           <div className="flex gap-4">
             <button 
               type="submit" 
-              className="px-4 py-2 bg-pink-600 text-white rounded disabled:opacity-50"
+              className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 disabled:opacity-50"
               disabled={isSubmitting}
             >
               {isSubmitting 
@@ -241,37 +241,36 @@ export default function AppointmentPage() {
         ) : appointments.length === 0 ? (
           <p>No appointments recorded.</p>
         ) : (
-          <table className="w-full bg-white shadow-sm rounded text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="p-3">Customer</th>
-                <th className="p-3">Service</th>
-                <th className="p-3">Staff</th>
-                <th className="p-3">Date</th>
-                <th className="p-3">Time</th>
-                <th className="p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appt) => (
-                <tr key={appt.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{appt.customer_name}</td>
-                  <td className="p-3">{appt.service}</td>
-                  <td className="p-3">{appt.staff}</td>
-                  <td className="p-3">{appt.date}</td>
-                  <td className="p-3">{appt.time}</td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => handleEdit(appt)}
-                      className="text-blue-600 hover:underline text-sm"
-                    >
-                      Edit
-                    </button>
-                  </td>
+          <div className="bg-white rounded shadow">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="p-3 text-left text-gray-900">Customer</th>
+                  <th className="p-3 text-left text-gray-900">Service</th>
+                  <th className="p-3 text-left text-gray-900">Date</th>
+                  <th className="p-3 text-left text-gray-900">Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {appointments.map((appt) => (
+                  <tr key={appt.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-gray-700">{appt.customer_name}</td>
+                    <td className="p-3 text-gray-700">{appt.service}</td>
+                    <td className="p-3 text-gray-700">{appt.date}</td>
+                    <td className="p-3 text-gray-700">{appt.time}</td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => handleEdit(appt)}
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </main>
     </div>
