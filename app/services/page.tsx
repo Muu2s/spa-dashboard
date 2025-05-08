@@ -99,7 +99,7 @@ export default function ServicesPage() {
               value={formData.name}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
             />
             <input
               type="number"

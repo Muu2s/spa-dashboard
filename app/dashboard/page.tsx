@@ -92,7 +92,7 @@ export default function DashboardPage() {
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">Dashboard Overview</h1>
 
         {loading ? (
           <p>Loading dashboard...</p>
@@ -101,9 +101,9 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Top Summary Boxes */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-white p-4 rounded shadow">
-                <h2 className="text-lg font-semibold">Today's Revenue</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-4 bg-white rounded shadow">
+                <h2 className="text-lg font-semibold mb-2 text-gray-900">Today&apos;s Revenue</h2>
                 <p className="text-2xl text-pink-600">RM {totalRevenue.toFixed(2)}</p>
               </div>
               <div className="bg-white p-4 rounded shadow">
@@ -130,22 +130,22 @@ export default function DashboardPage() {
               {appointments.length === 0 ? (
                 <p>No appointments today.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="border-b">
-                    <tr>
-                      <th className="p-2 text-left">Time</th>
-                      <th className="p-2 text-left">Customer</th>
-                      <th className="p-2 text-left">Service</th>
-                      <th className="p-2 text-left">Staff</th>
+                <table className="w-full bg-white shadow-sm rounded">
+                  <thead>
+                    <tr className="text-left border-b">
+                      <th className="p-3 text-gray-900">Time</th>
+                      <th className="p-3 text-gray-900">Customer</th>
+                      <th className="p-3 text-gray-900">Service</th>
+                      <th className="p-3 text-gray-900">Staff</th>
                     </tr>
                   </thead>
                   <tbody>
                     {appointments.map((a) => (
                       <tr key={a.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2">{a.time}</td>
-                        <td className="p-2">{a.customer_name}</td>
-                        <td className="p-2">{a.service}</td>
-                        <td className="p-2">{a.staff}</td>
+                        <td className="p-3 text-gray-700">{a.time}</td>
+                        <td className="p-3 text-gray-700">{a.customer_name}</td>
+                        <td className="p-3 text-gray-700">{a.service}</td>
+                        <td className="p-3 text-gray-700">{a.staff}</td>
                       </tr>
                     ))}
                   </tbody>
