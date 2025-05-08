@@ -6,20 +6,17 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+
+dayjs.extend(isSameOrAfter);
 
 interface Sale {
   id: string;
+  customer_name: string;
   service: string;
   amount: number;
-  created_at: string;
-}
-
-interface Appointment {
-  id: string;
-  service_id: string;
-  customer_name: string;
   date: string;
-  status: string;
+  staff?: string;
 }
 
 interface ChartData {
@@ -36,7 +33,6 @@ interface SalesPeriod {
 export default function AnalyticsPage() {
   const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [periodSales, setPeriodSales] = useState<SalesPeriod>({
@@ -44,6 +40,7 @@ export default function AnalyticsPage() {
     weekly: 0,
     monthly: 0
   });
+  const [completedAppointments, setCompletedAppointments] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -62,31 +59,24 @@ export default function AnalyticsPage() {
       const { data: salesData, error: salesError } = await supabase
         .from('sales')
         .select('*')
-        .order('created_at', { ascending: false });
-
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('appointments')
-        .select('*')
         .order('date', { ascending: false });
 
       if (salesError) throw new Error(`Sales fetch error: ${salesError.message}`);
-      if (appointmentsError) throw new Error(`Appointments fetch error: ${appointmentsError.message}`);
 
       setSales(salesData || []);
-      setAppointments(appointmentsData || []);
 
       // Calculate period sales
       if (salesData) {
         const dailySales = salesData
-          .filter(sale => dayjs(sale.created_at).isAfter(startOfDay))
+          .filter(sale => dayjs(sale.date).isSameOrAfter(startOfDay))
           .reduce((sum, sale) => sum + sale.amount, 0);
 
         const weeklySales = salesData
-          .filter(sale => dayjs(sale.created_at).isAfter(startOfWeek))
+          .filter(sale => dayjs(sale.date).isSameOrAfter(startOfWeek))
           .reduce((sum, sale) => sum + sale.amount, 0);
 
         const monthlySales = salesData
-          .filter(sale => dayjs(sale.created_at).isAfter(startOfMonth))
+          .filter(sale => dayjs(sale.date).isSameOrAfter(startOfMonth))
           .reduce((sum, sale) => sum + sale.amount, 0);
 
         setPeriodSales({
@@ -95,6 +85,13 @@ export default function AnalyticsPage() {
           monthly: monthlySales
         });
       }
+
+      // Calculate completed appointments from sales data
+      const completedCount = salesData?.filter(sale => 
+        dayjs(sale.date).isSame(dayjs(), 'day')
+      ).length || 0;
+
+      setCompletedAppointments(completedCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while fetching data');
       console.error('Data fetch error:', err);
@@ -113,58 +110,58 @@ export default function AnalyticsPage() {
     }
   };
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
-  const totalAppointments = appointments.length;
-
+  // Update revenue calculation for single service
   const revenueByService = sales.reduce<Record<string, number>>((acc, sale) => {
-    acc[sale.service] = (acc[sale.service] || 0) + sale.amount;
+    if (sale.service) {
+      acc[sale.service] = (acc[sale.service] || 0) + sale.amount;
+    }
     return acc;
   }, {});
 
-  const chartData: ChartData[] = Object.entries(revenueByService).map(([service, amount]) => ({
-    service,
-    amount,
-  }));
+  const chartData: ChartData[] = Object.entries(revenueByService)
+    .map(([service, amount]) => ({
+      service,
+      amount
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-2xl font-bold mb-6">Analytics Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-6">Analytics</h1>
 
         {error ? (
-          <div className="bg-red-50 text-red-500 p-4 rounded mb-4">
-            {error}
-          </div>
+          <div className="bg-red-50 text-red-500 p-4 rounded mb-4">{error}</div>
         ) : loading ? (
-          <div className="flex justify-center items-center h-64">
-            <p className="text-gray-500">Loading analytics...</p>
-          </div>
+          <p>Loading analytics...</p>
         ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2">Today&apos;s Revenue</h2>
+                <h2 className="text-lg font-semibold mb-2">Today&apos;s Sales</h2>
                 <p className="text-2xl text-pink-600">RM {periodSales.daily.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2">Weekly Revenue</h2>
+                <h2 className="text-lg font-semibold mb-2">Weekly Sales</h2>
                 <p className="text-2xl text-pink-600">RM {periodSales.weekly.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2">Monthly Revenue</h2>
+                <h2 className="text-lg font-semibold mb-2">Monthly Sales</h2>
                 <p className="text-2xl text-pink-600">RM {periodSales.monthly.toFixed(2)}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-4 bg-white rounded shadow">
                 <h2 className="text-lg font-semibold mb-2">Total Revenue</h2>
                 <p className="text-2xl text-pink-600">RM {totalRevenue.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2">Total Appointments</h2>
-                <p className="text-2xl text-pink-600">{totalAppointments}</p>
+                <h2 className="text-lg font-semibold mb-2">Completed Appointments</h2>
+                <p className="text-2xl text-pink-600">{completedAppointments}</p>
               </div>
             </div>
 
@@ -180,10 +177,10 @@ export default function AnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-gray-500 text-center py-8">No revenue data available</p>
+                <p className="text-gray-500">No data available</p>
               )}
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>

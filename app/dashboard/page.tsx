@@ -6,23 +6,31 @@ import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration_minutes: number;
+}
+
 interface Appointment {
   id: string;
-  time: string;
   customer_name: string;
-  service: string;
-  staff: string;
+  services: Service[];
+  staff?: string;
   date: string;
+  time: string;
+  total_duration: number;
+  total_price: number;
 }
 
 interface Sale {
   id: string;
+  customer_name: string;
+  service: string;
   amount: number;
   date: string;
-}
-
-interface ServiceCount {
-  [key: string]: number;
+  staff?: string;
 }
 
 export default function DashboardPage() {
@@ -61,99 +69,115 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []); // Empty dependency array since it doesn't depend on any props or state
+  }, [today]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]); // Add dependency
+  }, [fetchDashboardData]);
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
+  const todayRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
 
-  const serviceFrequency = appointments.reduce<ServiceCount>((acc, appointment) => {
-    acc[appointment.service] = (acc[appointment.service] || 0) + 1;
-    return acc;
-  }, {});
+  const handleMarkAsDone = async (appointment: Appointment) => {
+    try {
+      // Create sales record
+      const salesData = {
+        customer_name: appointment.customer_name,
+        service: appointment.services.map(s => s.name).join(', '),
+        amount: appointment.total_price,
+        date: today,
+        staff: appointment.staff || null
+      };
 
-  const topServices = Object.entries(serviceFrequency)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3);
+      // Create the sale record
+      const { error: salesError } = await supabase
+        .from('sales')
+        .insert([salesData]);
+
+      if (salesError) throw salesError;
+
+      // Delete the appointment
+      const { error: deleteError } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointment.id);
+
+      if (deleteError) throw deleteError;
+
+      // Refresh dashboard data
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Error marking appointment as done:', err);
+    }
+  };
 
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      router.push('/');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
+    await supabase.auth.signOut();
+    router.push('/');
   };
 
   return (
     <div className="flex min-h-screen">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900">Dashboard Overview</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900">Dashboard</h1>
 
-        {loading ? (
-          <p>Loading dashboard...</p>
-        ) : error ? (
-          <p className="text-red-500">Error: {error}</p>
-        ) : (
-          <>
-            {/* Top Summary Boxes */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="p-4 bg-white rounded shadow">
-                <h2 className="text-lg font-semibold mb-2 text-gray-900">Today&apos;s Revenue</h2>
-                <p className="text-2xl text-pink-600">RM {totalRevenue.toFixed(2)}</p>
-              </div>
-              <div className="bg-white p-4 rounded shadow">
-                <h2 className="text-lg font-semibold">Appointments Today</h2>
-                <p className="text-2xl">{appointments.length}</p>
-              </div>
-              <div className="bg-white p-4 rounded shadow">
-                <h2 className="text-lg font-semibold">Top Services</h2>
-                {topServices.length === 0 ? (
-                  <p className="text-gray-500">No data</p>
-                ) : (
-                  <ul className="mt-2 space-y-1">
-                    {topServices.map(([name, count]) => (
-                      <li key={name} className="text-sm">{name}: {count} times</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            {/* Appointment List */}
-            <div className="bg-white p-4 rounded shadow">
-              <h2 className="text-lg font-semibold mb-3">Today’s Appointments</h2>
-              {appointments.length === 0 ? (
-                <p>No appointments today.</p>
-              ) : (
-                <table className="w-full bg-white shadow-sm rounded">
-                  <thead>
-                    <tr className="text-left border-b">
-                      <th className="p-3 text-gray-900">Time</th>
-                      <th className="p-3 text-gray-900">Customer</th>
-                      <th className="p-3 text-gray-900">Service</th>
-                      <th className="p-3 text-gray-900">Staff</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {appointments.map((a) => (
-                      <tr key={a.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3 text-gray-700">{a.time}</td>
-                        <td className="p-3 text-gray-700">{a.customer_name}</td>
-                        <td className="p-3 text-gray-700">{a.service}</td>
-                        <td className="p-3 text-gray-700">{a.staff}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
+        {error && (
+          <div className="mb-6 bg-red-50 text-red-500 p-3 rounded">
+            {error}
+          </div>
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="text-lg font-semibold">Today&apos;s Revenue</h2>
+            <p className="text-2xl text-pink-600">RM {todayRevenue.toFixed(2)}</p>
+          </div>
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="text-lg font-semibold">Appointments Today</h2>
+            <p className="text-2xl">{appointments.length}</p>
+          </div>
+        </div>
+
+        {/* Appointment List */}
+        <div className="bg-white p-4 rounded shadow">
+          <h2 className="text-lg font-semibold mb-3">Today&apos;s Appointments</h2>
+          {appointments.length === 0 ? (
+            <p>No appointments today.</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="p-3 text-gray-900">Time</th>
+                  <th className="p-3 text-gray-900">Customer</th>
+                  <th className="p-3 text-gray-900">Services</th>
+                  <th className="p-3 text-gray-900">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {appointments.map((appointment) => (
+                  <tr key={appointment.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 text-gray-700">{appointment.time}</td>
+                    <td className="p-3 text-gray-700">{appointment.customer_name}</td>
+                    <td className="p-3 text-gray-700">
+                      {appointment.services.map(s => s.name).join(', ')}
+                    </td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => handleMarkAsDone(appointment)}
+                        className="text-green-600 hover:text-green-800 p-1"
+                        title="Mark as Done"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </main>
     </div>
   );

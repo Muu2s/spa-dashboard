@@ -99,7 +99,7 @@ export default function ServicesPage() {
               value={formData.name}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500 focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
             />
             <input
               type="number"
@@ -108,7 +108,7 @@ export default function ServicesPage() {
               value={formData.price}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500 focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+              className="p-2 border rounded w-full"
             />
             <input
               type="number"
@@ -117,7 +117,7 @@ export default function ServicesPage() {
               value={formData.duration_minutes}
               onChange={handleChange}
               required
-              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500 focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+              className="p-2 border rounded w-full"
             />
           </div>
           <button 

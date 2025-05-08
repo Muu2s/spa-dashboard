@@ -6,17 +6,32 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration_minutes: number;
+}
+
 interface Sale {
   id: string;
-  date: string;
+  customer_name: string;
+  services: string;
   amount: number;
-  service: string;
+  date: string;
+  staff?: string;
 }
 
 interface Appointment {
   id: string;
+  customer_name: string;
+  services: Service[];
+  staff?: string;
   date: string;
-  service: string;
+  time: string;
+  total_duration: number;
+  total_price: number;
+  status: 'pending' | 'completed';
 }
 
 export default function ReportsPage() {
@@ -30,8 +45,15 @@ export default function ReportsPage() {
   }, []);
 
   const fetchReports = async () => {
-    const { data: salesData, error: salesError } = await supabase.from('sales').select('*');
-    const { data: apptData, error: apptError } = await supabase.from('appointments').select('*');
+    const { data: salesData, error: salesError } = await supabase
+      .from('sales')
+      .select('*')
+      .order('date', { ascending: false });
+      
+    const { data: apptData, error: apptError } = await supabase
+      .from('appointments')
+      .select('*')
+      .order('date', { ascending: false });
 
     if (salesError) console.error('Sales error:', salesError);
     else setSales(salesData || []);
@@ -49,6 +71,8 @@ export default function ReportsPage() {
 
   const totalSales = sales.reduce((sum, s) => sum + s.amount, 0);
   const appointmentCount = appointments.length;
+  const pendingAppointments = appointments.filter(a => a.status === 'pending').length;
+  const completedAppointments = appointments.filter(a => a.status === 'completed').length;
 
   return (
     <div className="flex min-h-screen">
@@ -64,6 +88,8 @@ export default function ReportsPage() {
               <h2 className="text-xl font-semibold mb-2">Summary</h2>
               <p>Total Sales: <strong>RM {totalSales.toFixed(2)}</strong></p>
               <p>Total Appointments: <strong>{appointmentCount}</strong></p>
+              <p>Pending Appointments: <strong>{pendingAppointments}</strong></p>
+              <p>Completed Appointments: <strong>{completedAppointments}</strong></p>
             </div>
 
             <div className="bg-white p-4 rounded shadow-sm">
@@ -72,16 +98,20 @@ export default function ReportsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Service</th>
+                    <th className="p-2 text-left">Customer</th>
+                    <th className="p-2 text-left">Services</th>
                     <th className="p-2 text-left">Amount (RM)</th>
+                    <th className="p-2 text-left">Staff</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.slice(-5).reverse().map(sale => (
+                  {sales.slice(0, 5).map(sale => (
                     <tr key={sale.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">{sale.date}</td>
-                      <td className="p-2">{sale.service}</td>
+                      <td className="p-2">{sale.customer_name}</td>
+                      <td className="p-2">{sale.services || '-'}</td>
                       <td className="p-2">{sale.amount.toFixed(2)}</td>
+                      <td className="p-2">{sale.staff || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -94,14 +124,30 @@ export default function ReportsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Service</th>
+                    <th className="p-2 text-left">Time</th>
+                    <th className="p-2 text-left">Customer</th>
+                    <th className="p-2 text-left">Services</th>
+                    <th className="p-2 text-left">Status</th>
+                    <th className="p-2 text-left">Staff</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {appointments.slice(-5).reverse().map(appt => (
+                  {appointments.slice(0, 5).map(appt => (
                     <tr key={appt.id} className="border-b hover:bg-gray-50">
                       <td className="p-2">{appt.date}</td>
-                      <td className="p-2">{appt.service}</td>
+                      <td className="p-2">{appt.time}</td>
+                      <td className="p-2">{appt.customer_name}</td>
+                      <td className="p-2">{appt.services.map(s => s.name).join(', ')}</td>
+                      <td className="p-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-sm ${
+                          appt.status === 'completed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {appt.status === 'completed' ? 'Completed' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="p-2">{appt.staff || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
