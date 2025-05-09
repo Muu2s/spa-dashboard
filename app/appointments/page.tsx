@@ -16,6 +16,7 @@ interface Service {
 interface Appointment {
   id: string;
   customer_name: string;
+  phone_number: string;
   services: Service[];
   staff?: string;
   date: string;
@@ -31,6 +32,7 @@ export default function AppointmentPage() {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [formData, setFormData] = useState({
     customer_name: '',
+    phone_number: '',
     staff: '',
     date: '',
     time: '',
@@ -54,7 +56,7 @@ export default function AppointmentPage() {
     fetchServices();
     return () => {
       // Cleanup
-      setFormData({ customer_name: '', staff: '', date: '', time: '' });
+      setFormData({ customer_name: '', phone_number: '', staff: '', date: '', time: '' });
       setSelectedServices([]);
       setEditingId(null);
       setError(null);
@@ -83,6 +85,7 @@ export default function AppointmentPage() {
         .select(`
           id,
           customer_name,
+          phone_number,
           services,
           staff,
           date,
@@ -151,7 +154,7 @@ export default function AppointmentPage() {
     setIsSubmitting(true);
 
     try {
-      const { customer_name, staff, date, time } = formData;
+      const { customer_name, phone_number, staff, date, time } = formData;
 
       // Validate required fields
       if (!customer_name || !date || !time || selectedServices.length === 0) {
@@ -170,6 +173,7 @@ export default function AppointmentPage() {
 
       const appointmentData = {
         customer_name,
+        phone_number,
         services: servicesData,
         staff: staff || null,
         date,
@@ -214,7 +218,7 @@ export default function AppointmentPage() {
       }
 
       // Reset form on success
-      setFormData({ customer_name: '', staff: '', date: '', time: '' });
+      setFormData({ customer_name: '', phone_number: '', staff: '', date: '', time: '' });
       setSelectedServices([]);
       setEditingId(null);
       await fetchAppointments();
@@ -232,6 +236,7 @@ export default function AppointmentPage() {
       setError(null);
       setFormData({
         customer_name: appointment.customer_name || '',
+        phone_number: appointment.phone_number || '',
         staff: appointment.staff || '',
         date: appointment.date || '',
         time: appointment.time || ''
@@ -245,7 +250,7 @@ export default function AppointmentPage() {
   };
 
   const handleCancelEdit = () => {
-    setFormData({ customer_name: '', staff: '', date: '', time: '' });
+    setFormData({ customer_name: '', phone_number: '', staff: '', date: '', time: '' });
     setSelectedServices([]);
     setEditingId(null);
   };
@@ -346,6 +351,16 @@ export default function AppointmentPage() {
               disabled={isSubmitting}
             />
             <input
+              type="tel"
+              name="phone_number"
+              placeholder="Phone Number"
+              value={formData.phone_number}
+              onChange={handleChange}
+              required
+              className="p-2 border rounded w-full text-gray-900 placeholder-gray-500"
+              disabled={isSubmitting}
+            />
+            <input
               type="text"
               name="staff"
               placeholder="Staff"
@@ -387,8 +402,8 @@ export default function AppointmentPage() {
                       : 'hover:bg-gray-50'
                   }`}
                 >
-                  <div className="font-medium">{service.name}</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="font-medium text-gray-900">{service.name}</div>
+                  <div className="text-sm text-gray-700">
                     <span>RM {service.price.toFixed(2)}</span>
                     <span className="mx-2">•</span>
                     <span>{service.duration_minutes} mins</span>
@@ -456,6 +471,7 @@ export default function AppointmentPage() {
               <thead>
                 <tr className="border-b">
                   <th className="p-3 text-left text-gray-900">Customer</th>
+                  <th className="p-3 text-left text-gray-900">Phone</th>
                   <th className="p-3 text-left text-gray-900">Services</th>
                   <th className="p-3 text-left text-gray-900">Total</th>
                   <th className="p-3 text-left text-gray-900">Duration</th>
@@ -469,6 +485,7 @@ export default function AppointmentPage() {
                 {appointments.map((appt) => (
                   <tr key={appt.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 text-gray-700">{appt.customer_name}</td>
+                    <td className="p-3 text-gray-700">{appt.phone_number}</td>
                     <td className="p-3 text-gray-700">
                       {appt.services.map(s => s.name).join(', ')}
                     </td>
