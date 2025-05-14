@@ -1,6 +1,6 @@
 import { utils, writeFile } from 'xlsx';
 import dayjs from 'dayjs';
-import { Sale } from './page';
+import { Sale } from './types';
 
 export function exportSalesToExcel(sales: Sale[], period: 'weekly' | 'monthly') {
   let filteredSales: Sale[] = [];

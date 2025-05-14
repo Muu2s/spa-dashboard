@@ -8,17 +8,9 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import { exportSalesToExcel } from './exportSalesToExcel';
+import { Sale } from './types';
 
 dayjs.extend(isSameOrAfter);
-
-interface Sale {
-  id: string;
-  customer_name: string;
-  service: string;
-  amount: number;
-  date: string;
-  staff?: string;
-}
 
 interface ChartData {
   service: string;
