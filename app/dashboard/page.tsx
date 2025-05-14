@@ -175,7 +175,7 @@ export default function DashboardPage() {
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h2 className="text-lg font-semibold">Appointments Today</h2>
-            <p className="text-3xl font-bold">{appointments.length}</p>
+            <p className="text-3xl font-bold">{appointments.filter(appointment => appointment.date === dayjs().format('YYYY-MM-DD')).length}</p>
           </div>
         </div>
 
