@@ -1,0 +1,68 @@
+.calendarContainer {
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.react-calendar {
+  border: none;
+  width: 100%;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1rem;
+  color: #22223b;
+}
+
+.react-calendar__navigation button {
+  color: #9d174d;
+  min-width: 44px;
+  background: none;
+  font-size: 1.2rem;
+  margin: 2px;
+  border-radius: 0.5rem;
+  border: none;
+  transition: background 0.2s;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.react-calendar__tile {
+  background: none;
+  border-radius: 0.5rem;
+  color: #22223b;
+  transition: background 0.2s, color 0.2s;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.react-calendar__tile--active {
+  background: #be185d;
+  color: #fff !important;
+}
+
+.react-calendar__tile--now {
+  background: #f9a8d4;
+  color: #fff;
+}
+
+.has-appointments-dot {
+  width: 6px;
+  height: 6px;
+  background: #be185d;
+  border-radius: 50%;
+  margin: 0 auto;
+  margin-top: 2px;
+}
+
+/* Removed global selectors that caused Next.js CSS module error */

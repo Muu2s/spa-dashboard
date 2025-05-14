@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import { exportSalesToExcel } from './exportSalesToExcel';
 
 dayjs.extend(isSameOrAfter);
 
@@ -165,16 +166,42 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
+            <div className="flex gap-4 mb-4">
+              <button
+                className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+                onClick={() => exportSalesToExcel(sales, 'weekly')}
+              >
+                Download Weekly Sales (Excel)
+              </button>
+              <button
+                className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+                onClick={() => exportSalesToExcel(sales, 'monthly')}
+              >
+                Download Monthly Sales (Excel)
+              </button>
+            </div>
+
             <div className="bg-white p-4 rounded shadow">
               <h2 className="text-lg font-semibold mb-4">Revenue by Service</h2>
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="service" />
-                    <YAxis />
+                  <PieChart width={400} height={300}>
+                    <Pie
+                      data={chartData}
+                      dataKey="amount"
+                      nameKey="service"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      label
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random()*16777215).toString(16)}`} />
+                      ))}
+                    </Pie>
                     <Tooltip />
-                    <Bar dataKey="amount" fill="#ec4899" />
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
               ) : (
                 <p className="text-gray-500">No data available</p>

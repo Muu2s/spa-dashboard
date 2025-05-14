@@ -5,6 +5,13 @@ import { supabase } from '@/lib/supabase';
 import Sidebar from '@/components/Sidebar';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
+import { Calendar } from 'react-date-range';
+// @ts-ignore
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import styles from './DashboardCalendar.module.css';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Popover, Transition } from '@headlessui/react';
 
 interface Service {
   id: string;
@@ -39,52 +46,71 @@ export default function DashboardPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const today = dayjs().format('YYYY-MM-DD');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedAppointments, setSelectedAppointments] = useState<Appointment[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      const today = dayjs();
+      const startDate = today.format('YYYY-MM-DD');
+      const endDate = today.add(7, 'day').format('YYYY-MM-DD');
 
-      const { data: todayAppointments, error: aError } = await supabase
+      const { data: allAppointments, error: aError } = await supabase
         .from('appointments')
         .select('*')
-        .eq('date', today)
-        .order('time');
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date, time');
+
+      if (aError) {
+        setError(aError.message);
+        setAppointments([]);
+      } else {
+        setAppointments(allAppointments || []);
+      }
 
       const { data: todaySales, error: sError } = await supabase
         .from('sales')
         .select('*')
-        .eq('date', today);
+        .eq('date', today.format('YYYY-MM-DD'));
 
-      if (aError) throw new Error(`Appointments error: ${aError.message}`);
-      if (sError) throw new Error(`Sales error: ${sError.message}`);
-
-      setAppointments(todayAppointments || []);
-      setSales(todaySales || []);
+      if (sError) {
+        setError(sError.message);
+        setSales([]);
+      } else {
+        setSales(todaySales || []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while fetching data');
       console.error('Dashboard data fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [today]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   const todayRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
 
-  const handleMarkAsDone = async (appointment: Appointment) => {
+  const handleMarkAsDone = async (appointment: Appointment, today: dayjs.Dayjs) => {
     try {
       // Create sales record
       const salesData = {
         customer_name: appointment.customer_name,
         service: appointment.services.map(s => s.name).join(', '),
         amount: appointment.total_price,
-        date: today,
+        date: today.format('YYYY-MM-DD'),
         staff: appointment.staff || null
       };
 
@@ -105,6 +131,8 @@ export default function DashboardPage() {
 
       // Refresh dashboard data
       await fetchDashboardData();
+      setSuccessMessage('Appointment marked as done!');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error('Error marking appointment as done:', err);
     }
@@ -121,28 +149,41 @@ export default function DashboardPage() {
       <main className="flex-1 p-6 bg-gray-50">
         <h1 className="text-2xl font-bold mb-6 text-gray-900">Dashboard</h1>
 
+        {loading && (
+          <div className="mb-6 p-3 rounded">
+            Loading dashboard data...
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 bg-red-50 text-red-500 p-3 rounded">
-            {error}
+            <p>An error occurred while fetching dashboard data.</p>
+            <p>Please try again later.</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-6 bg-green-50 text-green-500 p-3 rounded">
+            {successMessage}
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white p-4 rounded shadow">
-            <h2 className="text-lg font-semibold">Today&apos;s Revenue</h2>
-            <p className="text-2xl text-pink-600">RM {todayRevenue.toFixed(2)}</p>
+            <h2 className="text-lg font-semibold">Today's Revenue</h2>
+            <p className="text-3xl font-bold text-pink-600">RM {todayRevenue.toFixed(2)}</p>
           </div>
           <div className="bg-white p-4 rounded shadow">
             <h2 className="text-lg font-semibold">Appointments Today</h2>
-            <p className="text-2xl">{appointments.length}</p>
+            <p className="text-3xl font-bold">{appointments.length}</p>
           </div>
         </div>
 
         {/* Appointment List */}
         <div className="bg-white p-4 rounded shadow">
-          <h2 className="text-lg font-semibold mb-3">Today&apos;s Appointments</h2>
-          {appointments.length === 0 ? (
-            <p>No appointments today.</p>
+          <h2 className="text-lg font-semibold mb-3">Today's Appointments</h2>
+          {appointments.filter(appointment => appointment.date === dayjs().format('YYYY-MM-DD')).length === 0 ? (
+            <p>No appointments scheduled for today. Consider creating a new appointment.</p>
           ) : (
             <table className="w-full">
               <thead>
@@ -154,7 +195,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appointment) => (
+                {appointments.filter(appointment => appointment.date === dayjs().format('YYYY-MM-DD')).map((appointment) => (
                   <tr key={appointment.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 text-gray-700">{appointment.time}</td>
                     <td className="p-3 text-gray-700">{appointment.customer_name}</td>
@@ -163,7 +204,7 @@ export default function DashboardPage() {
                     </td>
                     <td className="p-3">
                       <button
-                        onClick={() => handleMarkAsDone(appointment)}
+                        onClick={() => handleMarkAsDone(appointment, dayjs())}
                         className="text-green-600 hover:text-green-800 p-1"
                         title="Mark as Done"
                       >
@@ -177,6 +218,42 @@ export default function DashboardPage() {
               </tbody>
             </table>
           )}
+        </div>
+
+        {/* Calendar and Future Appointments Side by Side */}
+        <div className="flex flex-col md:flex-row gap-6 mb-6">
+          <div className="bg-white p-4 rounded shadow w-full md:w-1/2">
+            <h2 className="text-lg font-semibold mb-3">Weekly Appointments</h2>
+            {hydrated && (
+              <div className="relative block w-full">
+                {/* Calendar component (react-date-range) */}
+                <Calendar
+                  date={calendarDate}
+                  onChange={(date) => {
+                    setCalendarDate(date);
+                    setSelectedDate(date);
+                    setSelectedAppointments(appointments.filter(appointment => appointment.date === dayjs(date).format('YYYY-MM-DD')));
+                  }}
+                  color="#be185d"
+                  showDateDisplay={false}
+                />
+              </div>
+            )}
+          </div>
+          <div className="bg-white p-4 rounded shadow w-full md:w-1/2">
+            <h2 className="text-lg font-semibold mb-3">Appointments on {dayjs(selectedDate).format('DD MMM YYYY')}</h2>
+            {selectedAppointments.length === 0 ? (
+              <p>No appointments scheduled for this day.</p>
+            ) : (
+              <ul>
+                {selectedAppointments.map((appointment) => (
+                  <li key={appointment.id} className="mb-2 p-2 rounded hover:bg-pink-50">
+                    <span className="font-semibold">{appointment.time}</span> - {appointment.customer_name} ({appointment.services.map(s => s.name).join(', ')})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </main>
     </div>
