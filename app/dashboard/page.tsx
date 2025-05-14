@@ -229,7 +229,7 @@ export default function DashboardPage() {
                 {/* Calendar component (react-date-range) */}
                 <Calendar
                   date={calendarDate}
-                  onChange={(date) => {
+                  onChange={(date: Date) => {
                     setCalendarDate(date);
                     setSelectedDate(date);
                     setSelectedAppointments(appointments.filter(appointment => appointment.date === dayjs(date).format('YYYY-MM-DD')));
